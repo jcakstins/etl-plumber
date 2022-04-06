@@ -99,8 +99,7 @@ class GlueSetup(object):
         self._spark: SparkSession = self._glue_context.spark_session
         self._job: Job = Job(glue_context=self.glue_context)
         self._job_timestamp: datetime = datetime.utcnow()
-        self._job.init(self._glue_args[job_name_arg], 
-                       self._glue_args)
+        self._initialise_job(job_name_arg, glue_arg_list)
         
     @property
     def logger(self):
@@ -133,8 +132,10 @@ class GlueSetup(object):
     def _get_glue_args(self, args: list) -> dict:
         from awsglue.utils import getResolvedOptions
 
-        glue_args: dict =  getResolvedOptions(args=sys.argv, options=args)
+        glue_args: dict = getResolvedOptions(args=sys.argv, options=args)
         if self.logger:
             self.logger.info(f"Glue Parsed Args {glue_args}")
         return glue_args
-                
+    
+    def _initialise_job(self, job_name, args):
+        self._job.init(job_name, args)
