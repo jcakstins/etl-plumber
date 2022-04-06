@@ -5,11 +5,8 @@ from datetime import datetime
 from pyspark.conf import SparkConf
 from pyspark.context import SparkContext
 from pyspark.sql import SparkSession
-from awsglue.context import GlueContext
-from awsglue.utils import getResolvedOptions
-from awsglue.job import Job
 
-class JobSetup(object):
+class JobSetup(ABC):
     
     @property
     @abstractmethod
@@ -70,6 +67,9 @@ class GlueSetup(object):
                  job_name_arg: str, 
                  glue_arg_list: list
                  ):
+        from awsglue.context import GlueContext
+        from awsglue.job import Job
+        
         self._glue_args: dict = self._get_glue_args(args=glue_arg_list)
         self._spark_context: SparkContext = SparkContext.getOrCreate()
         self._glue_context: GlueContext = GlueContext(self._spark_context)
@@ -84,7 +84,7 @@ class GlueSetup(object):
         return self._spark_context
     
     @property
-    def glue_context(self) -> GlueContext:
+    def glue_context(self) -> "awsglue.context.GlueContext":
         return self._glue_context
     
     @property
@@ -92,7 +92,7 @@ class GlueSetup(object):
         return self._spark
     
     @property
-    def job(self) -> Job:
+    def job(self) -> "awsglue.job.Job":
         return self._job
     
     @property
@@ -104,6 +104,8 @@ class GlueSetup(object):
         return self._job_timestamp
     
     def _get_glue_args(self, args: list) -> dict:
+        from awsglue.utils import getResolvedOptions
+        
         logger.info(f"Reading Glue Args {args}")
         glue_args: dict =  getResolvedOptions(args=sys.argv, options=args)
         logger.info(f"Glue Parsed Args {glue_args}")
