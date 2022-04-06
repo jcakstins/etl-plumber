@@ -1,12 +1,17 @@
 import sys
 from abc import ABC, abstractmethod
-from job_logger import logger
+from logging import Logger
 from datetime import datetime
 from pyspark.conf import SparkConf
 from pyspark.context import SparkContext
 from pyspark.sql import SparkSession
 
 class JobSetup(ABC):
+    
+    @property
+    @abstractmethod
+    def logger(self) -> Logger:
+        pass
     
     @property
     @abstractmethod
@@ -31,17 +36,19 @@ class JobSetup(ABC):
                 
     def __set_runtime_property(self, conf_key: str, conf_value: str):
         try:
-            logger.info(f"Setting {conf_key} to {conf_value}")
+            self.logger.info(f"Setting {conf_key} to {conf_value}")
             self.spark.conf.set(conf_key, conf_value)
         except Exception as err:
-            logger.error(f"Failed to set {conf_key} to {conf_value}\n{err}")
+            self.logger.error(f"Failed to set {conf_key} to {conf_value}\n{err}")
 
 class SparkSetup(JobSetup):
     
-    def __init__(self, 
+    def __init__(self,
                  app_name: str = None,
-                 spark_conf: SparkConf = None
+                 spark_conf: SparkConf = None,
+                 logger: Logger = None
                  ):
+        self._logger = logger
         self._spark_context: SparkContext = SparkContext.getOrCreate()
         self._spark: SparkSession = SparkSession.builder.\
             appName(app_name)\
@@ -49,6 +56,10 @@ class SparkSetup(JobSetup):
                     .getOrCreate()
         self._job_timestamp: datetime = datetime.utcnow()
         
+    @property
+    def logger(self):
+        return self._logger
+    
     @property
     def spark_context(self) -> SparkContext:
         return self._spark_context
@@ -65,11 +76,12 @@ class GlueSetup(object):
 
     def __init__(self, 
                  job_name_arg: str, 
-                 glue_arg_list: list
+                 glue_arg_list: list,
+                 logger: Logger = None
                  ):
         from awsglue.context import GlueContext
         from awsglue.job import Job
-        
+        self._logger = logger
         self._glue_args: dict = self._get_glue_args(args=glue_arg_list)
         self._spark_context: SparkContext = SparkContext.getOrCreate()
         self._glue_context: GlueContext = GlueContext(self._spark_context)
@@ -79,6 +91,10 @@ class GlueSetup(object):
         self._job.init(self._glue_args[job_name_arg], 
                        self._glue_args)
         
+    @property
+    def logger(self):
+        return self._logger
+    
     @property
     def spark_context(self) -> SparkContext:
         return self._spark_context
@@ -105,9 +121,9 @@ class GlueSetup(object):
     
     def _get_glue_args(self, args: list) -> dict:
         from awsglue.utils import getResolvedOptions
-        
-        logger.info(f"Reading Glue Args {args}")
+
         glue_args: dict =  getResolvedOptions(args=sys.argv, options=args)
-        logger.info(f"Glue Parsed Args {glue_args}")
+        if self.logger:
+            self.logger.info(f"Glue Parsed Args {glue_args}")
         return glue_args
                 
