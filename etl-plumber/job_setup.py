@@ -44,16 +44,12 @@ class JobSetup(ABC):
 class SparkSetup(JobSetup):
     
     def __init__(self,
-                 app_name: str = None,
                  spark_conf: SparkConf = None,
                  logger: Logger = None
                  ):
         self._logger = logger
         self._spark_context: SparkContext = SparkContext.getOrCreate()
-        self._spark: SparkSession = SparkSession.builder.\
-            appName(app_name)\
-                .config(conf=spark_conf)\
-                    .getOrCreate()
+        self._spark: SparkSession = self.__create_spark_session(spark_conf)
         self._job_timestamp: datetime = datetime.utcnow()
         
     @property
@@ -71,6 +67,21 @@ class SparkSetup(JobSetup):
     @property
     def job_timestamp(self) -> datetime:
         return self._job_timestamp
+    
+    def __create_spark_session(self, spark_conf: SparkConf) -> SparkSession:
+        if spark_conf:
+            spark = self.__create_spark_session_with_config(spark_conf)
+        else:
+            spark = SparkSession.builder.getOrCreate()
+        return spark
+    
+    def __create_spark_session_with_config(self, spark_conf: SparkConf) -> SparkSession:
+        if isinstance(spark_conf, SparkConf):
+            spark = SparkSession.builder.config(conf=spark_conf).getOrCreate()
+            return spark
+        else:
+            raise TypeError(f"spark_conf type should be `pyspark.conf.SparkConf`\
+                 instead got `{type(spark_conf)}`.")
 
 class GlueSetup(object):
 
