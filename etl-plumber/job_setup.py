@@ -1,6 +1,8 @@
 import sys
+from abc import ABC, abstractmethod
 from job_logger import logger
 from datetime import datetime
+from pyspark.conf import SparkConf
 from pyspark.context import SparkContext
 from pyspark.sql import SparkSession
 from awsglue.context import GlueContext
@@ -8,6 +10,61 @@ from awsglue.utils import getResolvedOptions
 from awsglue.job import Job
 
 class JobSetup(object):
+    
+    @property
+    @abstractmethod
+    def spark_context(self) -> SparkContext:
+        pass
+    
+    @property
+    def spark(self) -> SparkSession:
+        pass
+    
+    @property
+    def job_timestamp(self) -> datetime:
+        pass
+    
+    def set_spark_runtime_config(self, spark_config: dict) -> None:
+        if spark_config:
+            self.__set_runtime_properties(spark_config)
+            
+    def __set_runtime_properties(self, spark_config: dict):
+        for spark_conf_key, spark_conf_value in spark_config.items():
+            self.__set_runtime_property(spark_conf_key, spark_conf_value)
+                
+    def __set_runtime_property(self, conf_key: str, conf_value: str):
+        try:
+            logger.info(f"Setting {conf_key} to {conf_value}")
+            self.spark.conf.set(conf_key, conf_value)
+        except Exception as err:
+            logger.error(f"Failed to set {conf_key} to {conf_value}\n{err}")
+
+class SparkSetup(JobSetup):
+    
+    def __init__(self, 
+                 app_name: str = None,
+                 spark_conf: SparkConf = None
+                 ):
+        self._spark_context: SparkContext = SparkContext.getOrCreate()
+        self._spark: SparkSession = SparkSession.builder.\
+            appName(app_name)\
+                .config(conf=spark_conf)\
+                    .getOrCreate()
+        self._job_timestamp: datetime = datetime.utcnow()
+        
+    @property
+    def spark_context(self) -> SparkContext:
+        return self._spark_context
+    
+    @property
+    def spark(self) -> SparkSession:
+        return self._spark
+    
+    @property
+    def job_timestamp(self) -> datetime:
+        return self._job_timestamp
+
+class GlueSetup(object):
 
     def __init__(self, 
                  job_name_arg: str, 
@@ -52,17 +109,3 @@ class JobSetup(object):
         logger.info(f"Glue Parsed Args {glue_args}")
         return glue_args
                 
-    def set_spark_runtime_config(self, spark_config: dict) -> None:
-        if spark_config:
-            self.__set_runtime_properties(spark_config)
-            
-    def __set_runtime_properties(self, spark_config: dict):
-        for spark_conf_key, spark_conf_value in spark_config.items():
-            self.__set_runtime_property(spark_conf_key, spark_conf_value)
-                
-    def __set_runtime_property(self, conf_key: str, conf_value: str):
-        try:
-            logger.info(f"Setting {conf_key} to {conf_value}")
-            self._spark.conf.set(conf_key, conf_value)
-        except Exception as err:
-            logger.error(f"Failed to set {conf_key} to {conf_value}\n{err}")
