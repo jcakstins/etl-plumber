@@ -1,32 +1,14 @@
 import boto3
-from base_operator import Operator
-from abc import abstractmethod
+from base_operator import LoadOperator
 from job_logger import logger
 from typing import Union
-from job_setup import JobSetup
+from job_setup import GlueSetup
 from pyspark.sql import DataFrame
-from awsglue.dynamicframe import DynamicFrame
-from awsglue.data_sink import DataSink
-
-class LoadOperator(Operator):
-    
-    @abstractmethod
-    def load(self):
-        pass
-    
-    def apply(self, df: DataFrame) -> None:
-        self.load(df)
-        
-    def __rrshift__(self, other):
-        if isinstance(other, DataFrame):
-            self.apply(other)
-        raise TypeError(f"Can't perform pipeline execution,\
-                on LoadOperator, expected input DataFrame but got {type(other)}")
 
 class GlueSinkLoader(LoadOperator):
     
     def __init__(self, 
-                 job_setup: JobSetup,
+                 job_setup: GlueSetup,
                  database: str, 
                  table_name: str,
                  path: str,
@@ -41,30 +23,31 @@ class GlueSinkLoader(LoadOperator):
         self.optional_args = optional_args
         self.partitions = partitions
         
-    def __create_sink(self) -> DataSink:
-        
-        sink = self.glue_context.getSink(
-                    connection_type="s3", 
-                    path=self.path,
-                    partitionKeys=self.partitions,
-                    **self.optional_args)
+    def __create_sink(self) -> "awsglue.data_sink.DataSink":
+        from awsglue.data_sink import DataSink
+        sink: DataSink = self.glue_context.getSink(
+                        connection_type="s3", 
+                        path=self.path,
+                        partitionKeys=self.partitions,
+                        **self.optional_args)
         self.__set_save_format(sink)
         sink.setCatalogInfo(catalogDatabase=self.database, 
                             catalogTableName=self.table_name)
         return sink
     
-    def __set_save_format(self, sink: DataSink):
+    def __set_save_format(self, sink: "awsglue.data_sink.DataSink"):
         if self.format == "parquet":
             sink.setFormat(self.format, useGlueParquetWriter=True)
         else:
             sink.setFormat(self.format)
         
     def load(self, df: DataFrame) -> None:
+        from awsglue.dynamicframe import DynamicFrame
         dyf_output: DynamicFrame = DynamicFrame.fromDF(
             df, self.glue_context, "dyf_output")
 
         logger.info(f"Creating S3 DataSink Object")
-        sink: DataSink = self.__create_sink()
+        sink = self.__create_sink()
 
         logger.info(
             f"Writing data to {self.path} using Glue Sink")
@@ -76,7 +59,7 @@ class SparkLoader(LoadOperator):
                  table_name: str,
                  path: str,
                  format: str = "parquet", 
-                 save_mode: str = "append", 
+                 mode: str = "append", 
                  partitions: Union[str, list, None] = None,
                  crawler_name: str = None,
                  optional_args: dict = {}
@@ -84,7 +67,7 @@ class SparkLoader(LoadOperator):
         self.table_name = table_name
         self.path = path
         self.format = format
-        self.save_mode = save_mode
+        self.mode = mode
         self.partitions = partitions,
         self.crawler_name = crawler_name
         self.optional_args = optional_args
@@ -92,7 +75,7 @@ class SparkLoader(LoadOperator):
     def load(self, df: DataFrame) -> None:
         df.write.saveAsTable(name = self.table_name,
                                     format = self.format,
-                                    mode = self.save_mode,
+                                    mode = self.mode,
                                     partitionBy = self.partitions,
                                     path = self.path,
                                     **self.optional_args

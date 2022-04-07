@@ -1,36 +1,14 @@
-import boto3
-from base_operator import Operator
-from abc import abstractmethod
 from job_logger import logger
 from typing import Union
-from job_setup import JobSetup
+from job_setup import JobSetup, GlueSetup
 from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType
-from awsglue.dynamicframe import DynamicFrame
-from load_operators import LoadOperator
-from transform_operators import TransformOperator
-
-class ExtractOperator(Operator):
-    
-    @abstractmethod
-    def extract(self) -> DataFrame:
-        pass
-    
-    def apply(self) -> DataFrame:
-        df: DataFrame = self.extract()
-        return df
-    
-    def __rshift__(self, other):
-        if isinstance(other, TransformOperator) or isinstance(other, LoadOperator):
-            df = other.apply(self.apply())
-            return df
-        raise TypeError(f"Can't perform pipeline execution,\
-                expected TransformOperator or LoadOperator, but got {type(other)}")
+from base_operator import ExtractOperator
   
 class GlueCatalogExtractor(ExtractOperator):
     
     def __init__(self, 
-                 job_setup: JobSetup, 
+                 job_setup: GlueSetup, 
                  database: str, 
                  table_name: str,
                  optional_args: dict = {}):
@@ -45,7 +23,7 @@ class GlueCatalogExtractor(ExtractOperator):
         Returns:
             DataFrame
         """
-        
+        from awsglue.dynamicframe import DynamicFrame
         dynamic_df: DynamicFrame =self.glue_context.create_dynamic_frame_from_catalog(
             database=self.database,
             table_name= self.table_name,
