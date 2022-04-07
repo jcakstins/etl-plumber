@@ -1,5 +1,5 @@
 import boto3
-from base_operator import LoadOperator
+from base_operators import LoadOperator
 from job_logger import logger
 from typing import Union
 from job_setup import GlueSetup

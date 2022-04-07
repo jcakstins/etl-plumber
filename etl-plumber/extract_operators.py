@@ -3,7 +3,7 @@ from typing import Union
 from job_setup import JobSetup, GlueSetup
 from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType
-from base_operator import ExtractOperator
+from base_operators import ExtractOperator
   
 class GlueCatalogExtractor(ExtractOperator):
     
