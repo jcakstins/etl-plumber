@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from pyspark.sql import DataFrame
 from job_setup import JobSetup
-from typing import Union, List, Dict
+from typing import Union, List
      
 class Operator(ABC):
     
@@ -28,16 +28,13 @@ class ExtractOperator(Operator):
         
 class TransformOperator(Operator):
     
-    def __init__(self, job_setup: JobSetup):
-        self.job_setup = job_setup
-    
     @abstractmethod
     def transform(self, 
-                  input_data: Union[DataFrame, List[DataFrame], Dict[str:DataFrame]]
+                  input_data: Union[DataFrame, List[DataFrame]]
                   ) -> DataFrame:
         pass
     
-    def apply(self, input_data: Union[DataFrame, List[DataFrame], Dict[str:DataFrame]]) -> DataFrame:
+    def apply(self, input_data: Union[DataFrame, List[DataFrame]]) -> DataFrame:
         if isinstance(input_data, DataFrame):
             df: DataFrame = self.transform(input_data)
         elif isinstance(input_data, list):
@@ -78,7 +75,7 @@ class TransformOperator(Operator):
 class LoadOperator(Operator):
     
     @abstractmethod
-    def load(self):
+    def load(self, df: DataFrame):
         pass
     
     def apply(self, df: DataFrame) -> None:

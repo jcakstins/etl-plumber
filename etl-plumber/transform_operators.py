@@ -6,11 +6,10 @@ from pyspark.sql import DataFrame
 
 class FunctionTransformer(TransformOperator):
     
-    def __init__(self, 
-                 job_setup: JobSetup,
+    def __init__(self,
                  func: FunctionType,
                  func_params: dict):
-        super().__init__(job_setup)
+        super().__init__()
         self.func = func
         self.func_params = func_params
         
