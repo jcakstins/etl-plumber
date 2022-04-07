@@ -1,4 +1,3 @@
-from ast import Load
 import pytest
 from base_operators import ExtractOperator, TransformOperator, LoadOperator
 from pyspark.sql.dataframe import DataFrame
