@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
-from pyspark.sql import DataFrame
-from job_setup import JobSetup
+from pyspark.sql.dataframe import DataFrame
 from typing import Union, List
      
 class Operator(ABC):
@@ -83,6 +82,6 @@ class LoadOperator(Operator):
         
     def __rrshift__(self, other):
         if isinstance(other, DataFrame):
-            self.apply(other)
+            return self.apply(other)
         raise TypeError(f"Can't perform pipeline execution,\
                 on LoadOperator, expected input DataFrame but got {type(other)}")

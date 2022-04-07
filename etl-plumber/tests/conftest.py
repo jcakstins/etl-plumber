@@ -17,6 +17,9 @@ class DummyExtractor(ExtractOperator):
 class DummyTransformer(TransformOperator):
     
     def transform(self, input_data: Union[DataFrame, List[DataFrame]]) -> DataFrame:
+        print(f"Input type {type(input_data)}")
+        # "Input type <class 'pyspark.sql.dataframe.DataFrame'>"
+        # "Input type <class 'list'>"
         if isinstance(input_data, list):
             return input_data[0]
         return input_data
@@ -24,7 +27,8 @@ class DummyTransformer(TransformOperator):
 class DummyLoader(LoadOperator):
     
     def load(self, df: DataFrame) -> None:
-        df.show()
+        print(f"Saving cols: {df.columns}")
+        # "Saving cols: ['col1', 'col2', 'col3']"
 
 @pytest.fixture
 def spark_setup()-> SparkSetup:
